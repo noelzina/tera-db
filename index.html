@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TERA DB · 아이템 데이터베이스</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600&family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#070809;
+    --ink:#e7e9ee; --ink-dim:#9aa0ad; --ink-faint:#5c626f;
+    --accent:#5eead4; --accent2:#818cf8; --accent3:#f0abfc;
+    --glass:rgba(255,255,255,.045); --glass-2:rgba(255,255,255,.07);
+    --stroke:rgba(255,255,255,.09); --stroke-strong:rgba(255,255,255,.16);
+    --legend:#e9b949; --mythic:#e879c8; --unique:#56b6e0; --rare:#5ad19a; --common:#c4cad6;
+    --radius:16px;
+    --shadow:0 1px 0 rgba(255,255,255,.04) inset, 0 20px 50px -20px rgba(0,0,0,.8);
+    --sans:"Space Grotesk","Gowun Batang",system-ui,sans-serif;
+    --serif:"Fraunces","Gowun Batang",Georgia,serif;
+    --kr:"Gowun Batang","Space Grotesk",serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;
+    min-height:100vh;overflow-x:hidden;position:relative;letter-spacing:.01em}
+  body::before{content:"";position:fixed;inset:0;z-index:-2;
+    background:
+      radial-gradient(900px 600px at 12% -8%, rgba(129,140,248,.18), transparent 60%),
+      radial-gradient(800px 600px at 100% 0%, rgba(94,234,212,.13), transparent 55%),
+      radial-gradient(700px 700px at 60% 110%, rgba(240,171,252,.10), transparent 60%)}
+  body::after{content:"";position:fixed;inset:0;z-index:-1;opacity:.5;pointer-events:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+    mix-blend-mode:overlay}
+  .grid-bg{position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background-image:linear-gradient(var(--stroke) 1px,transparent 1px),linear-gradient(90deg,var(--stroke) 1px,transparent 1px);
+    background-size:64px 64px;mask-image:radial-gradient(ellipse 80% 60% at 50% 0%,#000 30%,transparent 75%);opacity:.35}
+  header{position:sticky;top:0;z-index:50;backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);
+    background:linear-gradient(180deg,rgba(10,12,14,.72),rgba(10,12,14,.45));border-bottom:1px solid var(--stroke)}
+  .bar{max-width:1240px;margin:0 auto;display:flex;align-items:center;gap:26px;padding:16px 26px;flex-wrap:wrap}
+  .logo{font-family:var(--serif);font-size:25px;font-weight:700;letter-spacing:.14em;
+    background:linear-gradient(120deg,#fff,#9aa0ad);-webkit-background-clip:text;background-clip:text;color:transparent;
+    display:flex;align-items:center;gap:10px}
+  .logo .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 14px var(--accent);animation:pulse 2.6s ease-in-out infinite}
+  @keyframes pulse{50%{opacity:.4;transform:scale(.82)}}
+  nav{display:flex;gap:4px;flex-wrap:wrap}
+  .navbtn{background:transparent;border:1px solid transparent;color:var(--ink-dim);font-family:var(--sans);
+    font-size:14px;font-weight:500;padding:8px 15px;border-radius:11px;cursor:pointer;transition:all .22s cubic-bezier(.2,.7,.3,1)}
+  .navbtn:hover{color:var(--ink);background:var(--glass)}
+  .navbtn.on{color:#06120f;background:linear-gradient(120deg,var(--accent),#a7f3e0);
+    box-shadow:0 6px 22px -8px var(--accent),0 0 0 1px rgba(255,255,255,.2) inset;font-weight:600}
+  .search{margin-left:auto;position:relative}
+  .search input{font-family:var(--sans);font-size:14px;color:var(--ink);width:280px;background:var(--glass);
+    border:1px solid var(--stroke);border-radius:13px;padding:11px 16px 11px 40px;transition:.22s;backdrop-filter:blur(8px)}
+  .search input::placeholder{color:var(--ink-faint)}
+  .search input:focus{outline:none;border-color:var(--stroke-strong);background:var(--glass-2);
+    box-shadow:0 0 0 4px rgba(94,234,212,.10),0 8px 30px -12px rgba(94,234,212,.4)}
+  .search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:16px;height:16px;stroke:var(--ink-faint)}
+  .hero{max-width:1240px;margin:0 auto;padding:54px 26px 14px}
+  .eyebrow{font-size:12px;letter-spacing:.32em;text-transform:uppercase;color:var(--accent);font-weight:600;
+    margin-bottom:14px;display:flex;align-items:center;gap:10px}
+  .eyebrow::before{content:"";width:26px;height:1px;background:linear-gradient(90deg,var(--accent),transparent)}
+  h1{font-family:var(--serif);font-weight:600;font-size:clamp(34px,5vw,58px);line-height:1.02;letter-spacing:-.02em;max-width:18ch}
+  h1 em{font-style:italic;background:linear-gradient(120deg,var(--accent),var(--accent2) 60%,var(--accent3));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .lede{color:var(--ink-dim);font-size:16px;max-width:54ch;margin-top:18px;line-height:1.65}
+  main{max-width:1240px;margin:0 auto;padding:30px 26px 110px}
+  .sub{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:26px}
+  .chip{font-family:var(--sans);font-size:13.5px;font-weight:500;color:var(--ink-dim);background:var(--glass);
+    border:1px solid var(--stroke);padding:8px 15px;border-radius:999px;cursor:pointer;
+    transition:.2s cubic-bezier(.2,.7,.3,1);display:inline-flex;align-items:center;gap:8px;backdrop-filter:blur(6px)}
+  .chip:hover{color:var(--ink);border-color:var(--stroke-strong);transform:translateY(-1px)}
+  .chip.on{color:var(--ink);background:linear-gradient(120deg,rgba(129,140,248,.22),rgba(94,234,212,.14));
+    border-color:rgba(129,140,248,.5);box-shadow:0 8px 26px -14px var(--accent2)}
+  .chip .c{font-size:11px;color:var(--ink-faint);font-variant-numeric:tabular-nums}
+  .chip.on .c{color:var(--accent)}
+  .panel{background:linear-gradient(180deg,var(--glass-2),var(--glass));border:1px solid var(--stroke);
+    border-radius:var(--radius);box-shadow:var(--shadow);backdrop-filter:blur(20px) saturate(130%);
+    -webkit-backdrop-filter:blur(20px) saturate(130%);overflow:hidden}
+  .panhead{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;
+    padding:22px 24px;border-bottom:1px solid var(--stroke)}
+  .title{font-family:var(--serif);font-size:24px;font-weight:600;letter-spacing:-.01em}
+  .meta{color:var(--ink-faint);font-size:13px;margin-top:4px;font-variant-numeric:tabular-nums}
+  .ctrls{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .ctrls label{color:var(--ink-faint);font-size:12.5px;display:flex;align-items:center;gap:7px}
+  .ctrls select,.ctrls input{font-family:var(--sans);font-size:13px;color:var(--ink);background:var(--glass);
+    border:1px solid var(--stroke);border-radius:10px;padding:7px 11px;transition:.2s}
+  .ctrls select:focus,.ctrls input:focus{outline:none;border-color:var(--stroke-strong);background:var(--glass-2)}
+  table{width:100%;border-collapse:collapse}
+  thead th{font-family:var(--sans);font-size:11.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--ink-faint);text-align:left;padding:13px 18px;cursor:pointer;user-select:none;white-space:nowrap;
+    transition:.18s;border-bottom:1px solid var(--stroke)}
+  thead th:hover{color:var(--accent)}
+  tbody td{padding:13px 18px;font-size:14.5px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle}
+  tbody tr{transition:background .15s}
+  tbody tr:hover{background:linear-gradient(90deg,rgba(94,234,212,.06),rgba(129,140,248,.05))}
+  tbody tr:last-child td{border-bottom:none}
+  .id{color:var(--ink-faint);font-variant-numeric:tabular-nums;font-size:13px;width:96px}
+  .nm{font-family:var(--kr);font-weight:700;font-size:15px}
+  .lv{text-align:center;font-variant-numeric:tabular-nums;width:78px;color:var(--ink-dim)}
+  .gcell{width:90px}
+  .gtag{font-size:12px;font-weight:600;padding:3px 10px;border-radius:7px;border:1px solid currentColor;
+    display:inline-block;line-height:1.4;background:rgba(255,255,255,.03)}
+  .tr{text-align:center;width:80px}
+  .yes{color:var(--rare)} .no{color:#e06a66}
+  .g-일반{color:var(--common)} .g-고급{color:#d6dbe5}
+  .g-희귀{color:var(--rare)} .g-전설{color:var(--legend)}
+  .g-신화{color:var(--mythic)} .g-유일{color:var(--unique)}
+  .pager{display:flex;gap:7px;justify-content:center;align-items:center;padding:20px;flex-wrap:wrap}
+  .pager button{font-family:var(--sans);font-size:13px;color:var(--ink-dim);background:var(--glass);
+    border:1px solid var(--stroke);padding:8px 14px;border-radius:10px;cursor:pointer;transition:.18s}
+  .pager button:hover:not(:disabled){color:var(--ink);border-color:var(--stroke-strong);background:var(--glass-2)}
+  .pager button:disabled{opacity:.32;cursor:default}
+  .pager .cur{color:var(--ink-faint);font-size:13px;padding:0 10px;font-variant-numeric:tabular-nums}
+  .empty,.hint,.loading{padding:70px 24px;text-align:center;color:var(--ink-faint);font-size:15px;line-height:1.9}
+  .hint b{color:var(--ink-dim);font-weight:500}
+  .loading{position:relative}
+  .loading::after{content:"";display:inline-block;width:18px;height:18px;margin-left:10px;vertical-align:-3px;
+    border:2px solid var(--stroke-strong);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  footer{max-width:1240px;margin:0 auto;padding:30px 26px 50px;color:var(--ink-faint);font-size:12px;line-height:1.8;border-top:1px solid var(--stroke)}
+  .reveal{opacity:0;transform:translateY(10px);animation:rise .6s cubic-bezier(.2,.7,.3,1) forwards}
+  @keyframes rise{to{opacity:1;transform:none}}
+  @media(max-width:640px){.search{margin-left:0;width:100%}.search input{width:100%}.bar{gap:14px}.hero{padding-top:34px}tbody td,thead th{padding:11px 12px}}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<header>
+  <div class="bar">
+    <div class="logo"><span class="dot"></span>TERA<span style="font-family:var(--sans);font-size:12px;letter-spacing:.18em;color:var(--ink-faint);font-weight:500;margin-left:2px">DB</span></div>
+    <nav id="nav"></nav>
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="globalSearch" type="text" placeholder="아이템 이름 검색…">
+    </div>
+  </div>
+</header>
+<section class="hero">
+  <div class="eyebrow">한국어 아이템 데이터베이스</div>
+  <h1>방대한 TERA의 아이템을 <em>한눈에</em> 탐색하세요</h1>
+  <p class="lede">무기 · 방어구 · 장신구 · 코스튬을 분류별로 정리했습니다. 게임 클라이언트 원본 데이터를 기반으로 생성되어 이름과 등급이 정확합니다. 위 메뉴에서 분류를 선택해 시작하세요.</p>
+</section>
+<main>
+  <div class="sub" id="sub"></div>
+  <div id="view">
+    <div class="panel reveal"><div class="hint"><b>분류를 선택하세요.</b><br>무기 · 방어구 · 장신구 · 코스튬 · 기타</div></div>
+  </div>
+</main>
+<footer>
+  비공식 한국어 데이터베이스 · 게임 클라이언트 데이터(StrSheet_Item · ItemData · ItemToolTip) 기반으로 생성되었습니다.<br>
+  TERA™는 KRAFTON, Inc.의 상표이며, 본 사이트는 KRAFTON과 무관합니다.
+</footer>
+<script>
+const PAGE_SIZE_DEFAULT = 25;
+let INDEX = {};
+let cur = { rows:[], cat:'', sort:{key:'id',dir:1}, page:1, pageSize:PAGE_SIZE_DEFAULT, q:'' };
+const cache = {};
+const $ = s=>document.querySelector(s);
+const SECTIONS = ['무기','방어구','장신구','코스튬','기타'];
+async function boot(){
+  INDEX = await (await fetch('data/index.json')).json();
+  const nav = $('#nav');
+  SECTIONS.forEach(sec=>{
+    if(!INDEX[sec]) return;
+    const b=document.createElement('button');
+    b.className='navbtn'; b.textContent=sec;
+    b.onclick=()=>selectSection(sec,b);
+    nav.appendChild(b);
+  });
+  $('#globalSearch').addEventListener('input',e=>{cur.q=e.target.value.trim();cur.page=1;render();});
+}
+async function selectSection(sec,btn){
+  document.querySelectorAll('.navbtn').forEach(x=>x.classList.remove('on'));
+  btn.classList.add('on');
+  const sub=$('#sub'); sub.innerHTML='';
+  $('#view').innerHTML='<div class="panel"><div class="loading">불러오는 중</div></div>';
+  const meta=INDEX[sec];
+  if(!cache[meta.slug]) cache[meta.slug]=await (await fetch('data/'+meta.slug+'.json')).json();
+  const groups=cache[meta.slug];
+  groups.forEach((g,i)=>{
+    const chip=document.createElement('button');
+    chip.className='chip reveal'; chip.style.animationDelay=(i*28)+'ms';
+    chip.innerHTML=esc(g.cat)+'<span class="c">'+g.count.toLocaleString()+'</span>';
+    chip.onclick=()=>selectCat(g,chip);
+    sub.appendChild(chip);
+  });
+  if(groups[0]) selectCat(groups[0], sub.firstChild);
+}
+function selectCat(g,chip){
+  document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+  if(chip) chip.classList.add('on');
+  cur.cat=g.cat; cur.rows=g.rows; cur.page=1; render();
+}
+function filtered(){
+  let r=cur.rows;
+  if(cur.q){ const q=cur.q.toLowerCase(); r=r.filter(x=>x.n.toLowerCase().includes(q)); }
+  const {key,dir}=cur.sort;
+  r=[...r].sort((a,b)=>{
+    let va,vb;
+    if(key==='id'){va=a.id;vb=b.id} else if(key==='lv'){va=+a.lv||0;vb=+b.lv||0}
+    else if(key==='n'){va=a.n;vb=b.n} else if(key==='g'){va=a.g;vb=b.g} else {va=a.t;vb=b.t}
+    if(va<vb)return -1*dir; if(va>vb)return 1*dir; return 0;
+  });
+  return r;
+}
+function render(){
+  if(!cur.cat){return;}
+  const all=filtered();
+  const total=all.length;
+  const pages=Math.max(1,Math.ceil(total/cur.pageSize));
+  if(cur.page>pages)cur.page=pages;
+  const start=(cur.page-1)*cur.pageSize;
+  const rows=all.slice(start,start+cur.pageSize);
+  const arrow=k=>cur.sort.key===k?(cur.sort.dir>0?' ↑':' ↓'):'';
+  let h='<div class="panel reveal"><div class="panhead"><div>';
+  h+='<div class="title">'+esc(cur.cat)+'</div>';
+  h+='<div class="meta">전체 '+total.toLocaleString()+'개'+(cur.q?(' · "'+esc(cur.q)+'" 검색'):'')+'</div></div>';
+  h+='<div class="ctrls"><label>페이지당<select id="ps">'+[25,50,100].map(n=>'<option '+(n===cur.pageSize?'selected':'')+'>'+n+'</option>').join('')+'</select></label>';
+  h+='<label><input id="localq" value="'+esc(cur.q)+'" placeholder="분류 내 검색…" style="width:160px"></label></div></div>';
+  if(total===0){ h+='<div class="empty">결과가 없습니다.</div>'; }
+  else{
+    h+='<table><thead><tr>'
+     +'<th data-k="id">ID'+arrow('id')+'</th>'
+     +'<th data-k="n">이름'+arrow('n')+'</th>'
+     +'<th data-k="g" class="gcell">등급'+arrow('g')+'</th>'
+     +'<th data-k="lv" class="lv">레벨'+arrow('lv')+'</th>'
+     +'<th data-k="t" class="tr">거래</th>'
+     +'</tr></thead><tbody>';
+    for(const x of rows){
+      h+='<tr><td class="id">'+x.id+'</td>'
+       +'<td class="nm g-'+esc(x.g)+'">'+esc(x.n)+'</td>'
+       +'<td class="gcell"><span class="gtag g-'+esc(x.g)+'">'+esc(x.g)+'</span></td>'
+       +'<td class="lv">'+esc(x.lv)+'</td>'
+       +'<td class="tr '+(x.t?'yes':'no')+'">'+(x.t?'✓':'✕')+'</td></tr>';
+    }
+    h+='</tbody></table>';
+    h+='<div class="pager">'
+     +'<button '+(cur.page<=1?'disabled':'')+' data-p="1">« 처음</button>'
+     +'<button '+(cur.page<=1?'disabled':'')+' data-p="'+(cur.page-1)+'">‹</button>'
+     +'<span class="cur">'+cur.page+' / '+pages+'</span>'
+     +'<button '+(cur.page>=pages?'disabled':'')+' data-p="'+(cur.page+1)+'">›</button>'
+     +'<button '+(cur.page>=pages?'disabled':'')+' data-p="'+pages+'">끝 »</button>'
+     +'</div>';
+  }
+  h+='</div>';
+  const v=$('#view'); v.innerHTML=h;
+  v.querySelectorAll('thead th').forEach(th=>th.onclick=()=>{
+    const k=th.dataset.k;
+    if(cur.sort.key===k)cur.sort.dir*=-1; else cur.sort={key:k,dir:1};
+    render();
+  });
+  const ps=$('#ps'); if(ps)ps.onchange=e=>{cur.pageSize=+e.target.value;cur.page=1;render()};
+  const lq=$('#localq'); if(lq)lq.oninput=e=>{cur.q=e.target.value.trim();$('#globalSearch').value=cur.q;cur.page=1;render()};
+  v.querySelectorAll('.pager button[data-p]').forEach(b=>b.onclick=()=>{cur.page=+b.dataset.p;render();window.scrollTo({top:220,behavior:'smooth'})});
+}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+boot();
+</script>
+</body>
+</html>
