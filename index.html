@@ -61,10 +61,10 @@
   .eyebrow{font-size:12px;letter-spacing:.32em;text-transform:uppercase;color:var(--accent);font-weight:600;
     margin-bottom:14px;display:flex;align-items:center;gap:10px}
   .eyebrow::before{content:"";width:26px;height:1px;background:linear-gradient(90deg,var(--accent),transparent)}
-  h1{font-family:var(--serif);font-weight:600;font-size:clamp(34px,5vw,58px);line-height:1.02;letter-spacing:-.02em;max-width:18ch}
+  h1{font-family:var(--serif);font-weight:600;font-size:clamp(34px,5vw,58px);line-height:1.02;letter-spacing:-.02em}
   h1 em{font-style:italic;background:linear-gradient(120deg,var(--accent),var(--accent2) 60%,var(--accent3));
     -webkit-background-clip:text;background-clip:text;color:transparent}
-  .lede{color:var(--ink-dim);font-size:16px;max-width:54ch;margin-top:18px;line-height:1.65}
+  .lede{color:var(--ink-dim);font-size:16px;margin-top:18px;line-height:1.65}
   main{max-width:1240px;margin:0 auto;padding:30px 26px 110px}
   .sub{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:26px}
   .chip{font-family:var(--sans);font-size:13.5px;font-weight:500;color:var(--ink-dim);background:var(--glass);
@@ -139,7 +139,7 @@
 </header>
 <section class="hero">
   <div class="eyebrow">한국어 아이템 데이터베이스</div>
-  <h1>방대한 TERA의 아이템을 <em>한눈에</em> 탐색하세요</h1>
+  <h1>방대한 TERA의 아이템을 <span style="background:linear-gradient(120deg,var(--accent),var(--accent2) 60%,var(--accent3));-webkit-background-clip:text;background-clip:text;color:transparent">한눈에</span> 탐색하세요</h1>
   <p class="lede">무기 · 방어구 · 장신구 · 코스튬을 분류별로 정리했습니다. 게임 클라이언트 원본 데이터를 기반으로 생성되어 이름과 등급이 정확합니다. 위 메뉴에서 분류를 선택해 시작하세요.</p>
 </section>
 <main>
@@ -157,6 +157,9 @@ const PAGE_SIZE_DEFAULT = 25;
 let INDEX = {};
 let cur = { rows:[], cat:'', sort:{key:'id',dir:1}, page:1, pageSize:PAGE_SIZE_DEFAULT, q:'' };
 const cache = {};
+let ALL = null;          // 전체 검색용: [{cat, sec, rows...}] 평탄화
+let gq = '';             // 전역 검색어
+let gTimer = null;
 const $ = s=>document.querySelector(s);
 const SECTIONS = ['무기','방어구','장신구','코스튬','기타'];
 async function boot(){
@@ -169,7 +172,75 @@ async function boot(){
     b.onclick=()=>selectSection(sec,b);
     nav.appendChild(b);
   });
-  $('#globalSearch').addEventListener('input',e=>{cur.q=e.target.value.trim();cur.page=1;render();});
+  $('#globalSearch').addEventListener('input',e=>{
+    gq=e.target.value.trim();
+    clearTimeout(gTimer);
+    gTimer=setTimeout(runGlobalSearch, 220);
+  });
+}
+
+// 전체 데이터를 한 번만 불러와 평탄화
+async function loadAll(){
+  if(ALL) return ALL;
+  const out=[];
+  for(const sec of SECTIONS){
+    const meta=INDEX[sec]; if(!meta) continue;
+    if(!cache[meta.slug]) cache[meta.slug]=await (await fetch('data/'+meta.slug+'.json')).json();
+    for(const g of cache[meta.slug]){
+      for(const r of g.rows) out.push({...r, cat:g.cat, sec});
+    }
+  }
+  ALL=out; return ALL;
+}
+
+async function runGlobalSearch(){
+  if(!gq){ // 검색어 비면 초기 화면으로
+    $('#sub').innerHTML='';
+    document.querySelectorAll('.navbtn').forEach(x=>x.classList.remove('on'));
+    $('#view').innerHTML='<div class="panel reveal"><div class="hint"><b>분류를 선택하세요.</b><br>무기 · 방어구 · 장신구 · 코스튬 · 기타</div></div>';
+    return;
+  }
+  $('#sub').innerHTML='';
+  document.querySelectorAll('.navbtn').forEach(x=>x.classList.remove('on'));
+  $('#view').innerHTML='<div class="panel"><div class="loading">전체 검색 중</div></div>';
+  const data=await loadAll();
+  const q=gq.toLowerCase();
+  const hits=data.filter(x=>x.n.toLowerCase().includes(q));
+  // 분류별 그룹화 (대분류 → 세부분류 순서 유지)
+  const order={}; let oi=0;
+  SECTIONS.forEach(s=>{ if(INDEX[s]) INDEX[s].cats.forEach(c=>order[s+'/'+c.cat]=oi++); });
+  const groups={};
+  for(const x of hits){ const k=x.sec+'/'+x.cat; (groups[k]=groups[k]||[]).push(x); }
+  const keys=Object.keys(groups).sort((a,b)=>(order[a]??9999)-(order[b]??9999));
+  let h='<div class="panel reveal"><div class="panhead"><div>';
+  h+='<div class="title">검색: "'+esc(gq)+'"</div>';
+  h+='<div class="meta">전체 '+hits.length.toLocaleString()+'개 · '+keys.length+'개 분류</div></div></div>';
+  if(hits.length===0){ h+='<div class="empty">결과가 없습니다.</div>'; }
+  for(const k of keys){
+    const [sec,cat]=k.split('/'); const list=groups[k];
+    h+='<div style="padding:18px 24px 6px"><span style="font-family:var(--serif);font-size:17px;font-weight:600">'+esc(cat)
+      +'</span> <span style="color:var(--ink-faint);font-size:12px">'+esc(sec)+' · '+list.length+'개</span></div>';
+    h+='<table><tbody>';
+    for(const x of list.slice(0,50)){
+      h+='<tr><td class="id">'+x.id+'</td>'
+       +'<td class="nm g-'+esc(x.g)+'">'+hl(x.n,gq)+'</td>'
+       +'<td class="gcell"><span class="gtag g-'+esc(x.g)+'">'+esc(x.g)+'</span></td>'
+       +'<td class="lv">'+esc(x.lv)+'</td>'
+       +'<td class="tr '+(x.t?'yes':'no')+'">'+(x.t?'✓':'✕')+'</td></tr>';
+    }
+    h+='</tbody></table>';
+    if(list.length>50) h+='<div style="padding:8px 24px 14px;color:var(--ink-faint);font-size:12px">…외 '+(list.length-50)+'개 (해당 분류 메뉴에서 전체 보기)</div>';
+  }
+  h+='</div>';
+  $('#view').innerHTML=h;
+}
+
+function hl(text,q){
+  const t=esc(text); const i=text.toLowerCase().indexOf(q.toLowerCase());
+  if(i<0||!q) return t;
+  // 안전하게: 원문 기준 위치로 잘라 esc 후 합침
+  const a=esc(text.slice(0,i)), b=esc(text.slice(i,i+q.length)), c=esc(text.slice(i+q.length));
+  return a+'<mark style="background:rgba(94,234,212,.25);color:#bff7ec;border-radius:3px;padding:0 2px">'+b+'</mark>'+c;
 }
 async function selectSection(sec,btn){
   document.querySelectorAll('.navbtn').forEach(x=>x.classList.remove('on'));
@@ -191,7 +262,7 @@ async function selectSection(sec,btn){
 function selectCat(g,chip){
   document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
   if(chip) chip.classList.add('on');
-  cur.cat=g.cat; cur.rows=g.rows; cur.page=1; render();
+  cur.cat=g.cat; cur.rows=g.rows; cur.page=1; cur.q=''; render();
 }
 function filtered(){
   let r=cur.rows;
@@ -252,7 +323,7 @@ function render(){
     render();
   });
   const ps=$('#ps'); if(ps)ps.onchange=e=>{cur.pageSize=+e.target.value;cur.page=1;render()};
-  const lq=$('#localq'); if(lq)lq.oninput=e=>{cur.q=e.target.value.trim();$('#globalSearch').value=cur.q;cur.page=1;render()};
+  const lq=$('#localq'); if(lq)lq.oninput=e=>{cur.q=e.target.value.trim();cur.page=1;render()};
   v.querySelectorAll('.pager button[data-p]').forEach(b=>b.onclick=()=>{cur.page=+b.dataset.p;render();window.scrollTo({top:220,behavior:'smooth'})});
 }
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
