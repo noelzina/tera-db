@@ -162,6 +162,7 @@ let gq = '';             // 전역 검색어
 let gTimer = null;
 const $ = s=>document.querySelector(s);
 const SECTIONS = ['무기','방어구','장신구','코스튬','기타'];
+const GRANK = {'일반':0,'고급':1,'희귀':2,'전설':3,'신화':4,'유일':5};
 async function boot(){
   INDEX = await (await fetch('data/index.json')).json();
   const nav = $('#nav');
@@ -271,7 +272,7 @@ function filtered(){
   r=[...r].sort((a,b)=>{
     let va,vb;
     if(key==='id'){va=a.id;vb=b.id} else if(key==='lv'){va=+a.lv||0;vb=+b.lv||0}
-    else if(key==='n'){va=a.n;vb=b.n} else if(key==='g'){va=a.g;vb=b.g} else {va=a.t;vb=b.t}
+    else if(key==='n'){va=a.n;vb=b.n} else if(key==='g'){va=GRANK[a.g]??99;vb=GRANK[b.g]??99} else {va=a.t;vb=b.t}
     if(va<vb)return -1*dir; if(va>vb)return 1*dir; return 0;
   });
   return r;
