@@ -130,17 +130,36 @@
   .iconph{width:34px;height:34px;border-radius:7px;display:block;background:rgba(255,255,255,.03);border:1px solid var(--stroke)}
   tr.irow{cursor:default}
 
-  /* tooltip card */
-  #itip{position:fixed;z-index:999;display:none;max-width:380px;min-width:240px;
-    background:linear-gradient(180deg,rgba(18,20,24,.98),rgba(12,14,17,.98));
-    border:1px solid var(--stroke-strong);border-radius:14px;padding:14px 16px;
-    box-shadow:0 24px 60px -16px rgba(0,0,0,.85),0 0 0 1px rgba(255,255,255,.04) inset;
-    backdrop-filter:blur(12px);pointer-events:none;font-size:13.5px;line-height:1.6}
-  #itip .tip-head{display:flex;gap:12px;align-items:flex-start;margin-bottom:10px}
-  #itip .tip-head img{width:44px;height:44px;border-radius:9px;border:1px solid var(--stroke);background:rgba(255,255,255,.04);flex:none}
-  #itip .tip-name{font-family:var(--kr);font-weight:700;font-size:15.5px;line-height:1.3}
-  #itip .tip-sub{color:var(--ink-faint);font-size:11.5px;margin-top:3px;font-variant-numeric:tabular-nums}
-  #itip .tip-body{color:var(--ink-dim);font-size:13px;border-top:1px solid var(--stroke);padding-top:10px;white-space:normal;word-break:break-word}
+  /* in-game style tooltip */
+  #itip{position:fixed;z-index:999;display:none;max-width:340px;min-width:230px;
+    background:linear-gradient(180deg,rgba(10,14,26,.985),rgba(6,9,18,.985));
+    border:1px solid #2a3a5c;border-radius:6px;padding:0;
+    box-shadow:0 24px 60px -16px rgba(0,0,0,.9),0 0 0 1px rgba(70,100,160,.18);
+    pointer-events:none;font-family:var(--kr);font-size:13px;line-height:1.55;overflow:hidden}
+  .git{padding:12px 14px}
+  .git-name{font-weight:700;font-size:15px;line-height:1.3;margin-bottom:9px}
+  .git-head{display:flex;gap:11px;align-items:flex-start}
+  .git-icon img{width:46px;height:46px;border-radius:5px;border:1px solid #2a3a5c;background:#0a0f1e;flex:none;display:block}
+  .git-icon{flex:none}
+  .git-meta{font-size:12.5px;color:#c7d2e0;display:flex;flex-direction:column;gap:2px}
+  .git-grade{font-weight:600}
+  .git-bind{color:#8fa3c4}
+  .git-trade{color:#e0a0a0}
+  .git-trade.no{color:#d05a5a}
+  .git-div{height:1px;background:linear-gradient(90deg,transparent,#2a3a5c,transparent);margin:10px 0}
+  .git-stats{display:flex;flex-direction:column;gap:3px}
+  .git-stat{display:flex;justify-content:space-between;color:#6fa8e0;font-size:12.5px}
+  .git-stat b{color:#9cc8f0;font-weight:600;font-variant-numeric:tabular-nums}
+  .git-sockets{margin-top:8px;display:flex;flex-direction:column;gap:2px}
+  .git-socket{color:#5f9fd0;font-size:12px}
+  .git-desc{color:#9fb0c8;font-size:12.5px;white-space:normal;word-break:break-word}
+  /* 등급색 (게임 기준) */
+  .git-name.g-일반,.git-grade.g-일반{color:#e8e8e8}
+  .git-name.g-고급,.git-grade.g-고급{color:#7fd13a}
+  .git-name.g-희귀,.git-grade.g-희귀{color:#4aa3e8}
+  .git-name.g-전설,.git-grade.g-전설{color:#e8a020}
+  .git-name.g-신화,.git-grade.g-신화{color:#e85ac0}
+  .git-name.g-유일,.git-grade.g-유일{color:#e85050}
 </style>
 </head>
 <body>
@@ -383,15 +402,42 @@ function ensureTipEl(){
 }
 function tipHTML(x){
   const ic=x.ic?('<img src="icons/'+esc(x.ic)+'.png" alt="">'):'';
-  let h='<div class="tip-head">';
-  h+=ic+'<div><div class="tip-name g-'+esc(x.g)+'">'+esc(x.n)+'</div>';
-  h+='<div class="tip-sub">ID '+x.id+' · '+esc(x.g)+' · Lv '+esc(x.lv)+' · '+(x.t?'거래가능':'거래불가')+'</div></div></div>';
+  // 등급색 이름
+  let h='<div class="git">';
+  h+='<div class="git-name g-'+esc(x.g)+'">'+esc(x.n)+'</div>';
+  // 헤더: 아이콘 + 좌측 정보(레벨/거래)
+  h+='<div class="git-head">';
+  h+='<div class="git-icon">'+ic+'</div>';
+  h+='<div class="git-meta">';
+  // 등급/종류 줄
+  h+='<div class="git-grade g-'+esc(x.g)+'">'+esc(x.g)+'</div>';
+  if(x.rlv) h+='<div>'+esc(x.rlv)+'레벨 이상 사용 가능</div>';
+  if(x.bd==='Equip') h+='<div class="git-bind">착용 시 귀속</div>';
+  else if(x.bd==='Pickup') h+='<div class="git-bind">획득 시 귀속</div>';
+  h+='<div class="git-trade '+(x.t?'':'no')+'">'+(x.t?'거래 가능':'거래 불가, 길드창고 보관 불가')+'</div>';
+  h+='</div></div>';
+  // 공격 성능
+  if(x.atk||x.imp){
+    h+='<div class="git-div"></div><div class="git-stats">';
+    if(x.atk) h+='<div class="git-stat"><span>공격력</span><b>'+esc(x.atk)+'</b></div>';
+    if(x.imp) h+='<div class="git-stat"><span>충격</span><b>'+esc(x.imp)+'</b></div>';
+    if(x.def&&x.def!=='0') h+='<div class="git-stat"><span>방어력</span><b>'+esc(x.def)+'</b></div>';
+    h+='</div>';
+  }
+  // 소켓
+  if(x.slot){
+    const n=parseInt(x.slot)||0;
+    if(n>0){ h+='<div class="git-sockets">';
+      for(let k=0;k<n;k++) h+='<div class="git-socket">크리스탈 장착 가능</div>';
+      h+='</div>'; }
+  }
+  // 한글 설명문
   if(x.tip){
-    // 게임 툴팁의 <br>, <font color> 태그를 살려서 표시
     let body=x.tip.replace(/<BR>/gi,'<br>');
     body=body.replace(/<font color\s*=\s*'?([#a-zA-Z0-9]+)'?>/gi,'<span style="color:$1">').replace(/<\/font>/gi,'</span>');
-    h+='<div class="tip-body">'+body+'</div>';
+    h+='<div class="git-div"></div><div class="git-desc">'+body+'</div>';
   }
+  h+='</div>';
   return h;
 }
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
