@@ -152,6 +152,8 @@
   .git-stat b{color:#9cc8f0;font-weight:600;font-variant-numeric:tabular-nums}
   .git-sockets{margin-top:8px;display:flex;flex-direction:column;gap:2px}
   .git-socket{color:#5f9fd0;font-size:12px}
+  .git-opts{display:flex;flex-direction:column;gap:3px}
+  .git-opt{color:#7fd07f;font-size:12.5px;line-height:1.5}
   .git-desc{color:#9fb0c8;font-size:12.5px;white-space:normal;word-break:break-word}
   /* 등급색 (게임 기준) */
   .git-name.g-일반,.git-grade.g-일반{color:#e8e8e8}
@@ -431,10 +433,24 @@ function tipHTML(x){
       for(let k=0;k<n;k++) h+='<div class="git-socket">크리스탈 장착 가능</div>';
       h+='</div>'; }
   }
+  // 옵션 효과 (초록)
+  if(x.opt&&x.opt.length){
+    h+='<div class="git-div"></div><div class="git-opts">';
+    for(const o of x.opt) h+='<div class="git-opt">'+esc(o)+'</div>';
+    h+='</div>';
+  }
   // 한글 설명문
   if(x.tip){
-    let body=x.tip.replace(/<BR>/gi,'<br>');
+    let body=x.tip;
+    // 색상 토큰: $COLOR(rrggbb) ... $COLOR  → span
+    body=body.replace(/\$COLOR\(([0-9a-fA-F]{6})\)/g,'<span style="color:#$1">');
+    body=body.replace(/\$COLOR\b/g,'</span>');
+    // <font color> 태그
     body=body.replace(/<font color\s*=\s*'?([#a-zA-Z0-9]+)'?>/gi,'<span style="color:$1">').replace(/<\/font>/gi,'</span>');
+    // 줄바꿈 토큰
+    body=body.replace(/\$br/gi,'<br>').replace(/<BR>/gi,'<br>');
+    // 헤더 토큰 $H ... 제거(따로 강조 안 함)
+    body=body.replace(/\$H/g,'');
     h+='<div class="git-div"></div><div class="git-desc">'+body+'</div>';
   }
   h+='</div>';
